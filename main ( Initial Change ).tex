@@ -1,0 +1,304 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{threeparttable}
+\usepackage[section]{placeins}
+\usepackage[round]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\captionsetup{font=small,labelfont=bf}
+
+% Float placement behavior
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.8}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{4}
+
+\begin{document}
+
+% ------------------------------------------------------------------ Title Page
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+{\LARGE\bfseries Applied Volatility Modeling and Dynamic Conditional Correlation\par}
+\vspace{0.8cm}
+{\large An Empirical Evaluation of GARCH, Asymmetric, and DCC Specifications in LSE Equity ETFs\par}
+\vspace{2.5cm}
+\rule{\textwidth}{0.8pt}\par
+\vspace{0.4cm}
+\begin{minipage}[t]{0.48\textwidth}
+\raggedright
+\vspace*{1.4cm}
+\textbf{Authors:}\\
+Arnav Srivastava\\
+L\'evi Th\'e
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\raggedleft
+\textbf{Group:}\\
+1\\[0.3cm]
+\textbf{Course:}\\
+Econometrics for Quantitative\\
+Finance\\[0.3cm]
+\textbf{Institution:}\\
+Vrije Universiteit Amsterdam
+\end{minipage}\par
+\vspace{0.4cm}
+\rule{\textwidth}{0.8pt}\par
+\vfill
+{\large \today\par}
+\end{titlepage}
+\hypersetup{pageanchor=true}
+
+\newpage
+
+% ------------------------------------------------------------------ Abstract
+\section*{Abstract}
+This paper provides a rigorous empirical evaluation of univariate and multivariate conditional volatility specifications applied to two London Stock Exchange (LSE) equity benchmark Exchange-Traded Funds: \textbf{CSPX.L} (iShares Core S\&P 500 UCITS ETF) and \textbf{VUAG.L} (Vanguard FTSE 100 UCITS ETF). Spanning the complete trading sample from January 2021 through December 2025 ($T = 1,258$ observations), we estimate three baseline specifications ($\text{GARCH}(1,1)$, EWMA, and RiskMetrics) alongside an asymmetric specification ($\text{GJR-GARCH}(1,1)$). Model performance is evaluated using Log-Likelihood, AIC, BIC, and residual normal quantile transform distributions ($q_t$). We further analyze structural volatility reactions around the global trade shock of Liberation Day (April 2, 2025). Finally, a Dynamic Conditional Correlation ($\text{DCC-GARCH}$) model is estimated to evaluate dynamic cross-asset co-movement stability and sub-sample correlation breakdowns.
+
+% ------------------------------------------------------------------ 1. Introduction
+\section{Introduction}
+Time-varying volatility and conditional variance clustering represent fundamental stylised facts across empirical equity returns (Brooks, 2019). Understanding how financial asset volatilities evolve over time—and how cross-asset correlations shift during periods of macro stress—is critical for risk management, asset allocation, and option pricing. 
+
+This paper evaluates univariate conditional heteroskedasticity models and bivariate dynamic correlation filters across two highly liquid broad equity benchmark ETFs traded on the London Stock Exchange (LSE). By utilizing primary LSE market data from 2021 through 2025, we examine whether asymmetric shock responsiveness ($\text{GJR-GARCH}$) outperforms symmetric formulations ($\text{GARCH}$, EWMA, RiskMetrics), and how cross-border correlation responds to major geopolitical trade events.
+
+\newpage
+% ------------------------------------------------------------------ 2. Data
+\section{Data}
+
+\subsection{Asset Selection Methodology}
+Given our focus on the London Stock Exchange (LSE) universe, the pair \textbf{CSPX.L} (iShares Core S\&P 500 UCITS ETF) and \textbf{VUAG.L} (Vanguard FTSE 100 UCITS ETF) was filtered based on four structural criteria:
+\begin{enumerate}
+    \item \textbf{Benchmark Representation:} \textbf{CSPX.L} and \textbf{VUAG.L} represent ultra-large-cap flagship funds tracking the US and UK equity markets, respectively, providing high liquidity and minimal bid-ask spreads.
+    \item \textbf{Accumulating Share Class:} Both funds automatically reinvest dividends into the NAV, eliminating dividend payout discontinuities and enabling precise continuous log-return calculations directly from price series.
+    \item \textbf{Exclusion of Non-Standard ETPs:} Leveraged, inverse, and synthetic instruments were excluded to prevent daily path-dependent reset distortions in conditional variance estimation.
+    \item \textbf{Complete Calendar Alignment:} Slicing the full LSE dataset across January 2021--December 2025 yielded $T = 1,258$ synchronized trading sessions with zero missing values.
+\end{enumerate}
+
+\subsection{Descriptive Statistics}
+Both price series were aligned on matching exchange trading days over the 5-year sample period (January 4, 2021 -- December 30, 2025), yielding $T = 1,258$ clean daily log-returns $y_t = \ln(P_t / P_{t-1})$ processed in-memory via pandas DataFrames. Table \ref{tab:summary_stats} reports summary descriptive statistics for both return series.
+
+\begin{table}[H]
+\centering
+\caption{Descriptive Summary Statistics of Daily Log-Returns (2021--2025)}
+\label{tab:summary_stats}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Asset} & \textbf{Mean (\%)} & \textbf{Std. Dev (\%)} & \textbf{Ann. Vol (\%)} & \textbf{Skewness} & \textbf{Kurtosis} & \textbf{Obs.} \\
+\midrule
+\textbf{CSPX.L} & 0.0543 & 1.015 & 16.11 & -0.326 & 2.722 & 1,258 \\
+\textbf{VUAG.L} & 0.0550 & 0.917 & 14.56 & -0.345 & 3.022 & 1,258 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both assets exhibit slight negative skewness and moderate excess kurtosis, highlighting the fat-tailed return distributions typical of broad equity index benchmarks.
+
+\newpage
+
+% ------------------------------------------------------------------ 3. Methodology
+\section{Methodology}
+
+\subsection{Univariate Volatility Models}
+We estimate four univariate conditional variance specifications for each asset return series $y_t = \mu + u_t$, where $u_t = \sigma_t \varepsilon_t$ and $\varepsilon_t \sim \mathcal{N}(0, 1)$:
+
+\begin{enumerate}
+    \item \textbf{GARCH(1,1)}:
+    \begin{equation}
+        \sigma_t^2 = \omega + \alpha u_{t-1}^2 + \beta \sigma_{t-1}^2
+    \end{equation}
+    
+    \item \textbf{Exponentially Weighted Moving Average (EWMA)} ($\omega = 0, \alpha = 1 - \delta$):
+    \begin{equation}
+        \sigma_t^2 = (1 - \delta) u_{t-1}^2 + \delta \sigma_{t-1}^2
+    \end{equation}
+    
+    \item \textbf{RiskMetrics} ($\omega = 0, \delta = 0.94, \alpha = 0.06$):
+    \begin{equation}
+        \sigma_t^2 = 0.06 u_{t-1}^2 + 0.94 \sigma_{t-1}^2
+    \end{equation}
+    
+    \item \textbf{GJR-GARCH(1,1)} (Glosten, Jagannathan, and Runkle, 1993):
+    \begin{equation}
+        \sigma_t^2 = \omega + \alpha u_{t-1}^2 + \gamma u_{t-1}^2 \mathbb{I}_{\{u_{t-1} < 0\}} + \beta \sigma_{t-1}^2
+    \end{equation}
+\end{enumerate}
+
+\subsection{Dynamic Conditional Correlation (DCC)}
+Using standardized residuals $v_{1,t}$ and $v_{2,t}$ extracted from the optimal GJR-GARCH specifications, we examine bivariate cross-asset correlation using the Engle (2002) $\text{DCC}(1,1)$ filter:
+\begin{align}
+    Q_{t+1} &= S (1 - a - b) + a (v_t v_t') + b Q_t \\
+    R_{t+1} &= (\text{diag } Q_{t+1})^{-1/2} Q_{t+1} (\text{diag } Q_{t+1})^{-1/2}
+\end{align}
+where $S$ represents the unconditional covariance matrix of standardized residuals, $a$ captures short-term innovation shocks, and $b$ measures correlation persistence.
+
+\newpage
+
+% ------------------------------------------------------------------ 4. Results
+\section{Results}
+
+\subsection{Estimation Results and Model Selection}
+All models were optimized using Maximum Likelihood Estimation (MLE) under Gaussian innovation assumptions using L-BFGS-B numerical optimization. Table \ref{tab:model_comparison} details the Log-Likelihood ($\ln L$), Akaike Information Criterion (AIC), and Bayesian Information Criterion (BIC) for both ETFs.
+
+\begin{table}[H]
+\centering
+\caption{Model Comparison and Information Criteria}
+\label{tab:model_comparison}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Asset} & \textbf{Model} & \textbf{Log-Likelihood} & \textbf{AIC} & \textbf{BIC} \\
+\midrule
+\textbf{CSPX.L} & GARCH(1,1) & 4,096.27 & -8,184.55 & -8,164.00 \\
+ & EWMA & 4,086.14 & -8,168.29 & -8,158.01 \\
+ & RiskMetrics & 4,085.55 & -8,171.09 & -8,171.09 \\
+ & \textbf{GJR-GARCH(1,1)} & \textbf{4,106.84} & \textbf{-8,203.68} & \textbf{-8,177.99} \\
+\midrule
+\textbf{VUAG.L} & GARCH(1,1) & 4,194.22 & -8,380.45 & -8,359.90 \\
+ & EWMA & 4,177.85 & -8,351.71 & -8,341.44 \\
+ & RiskMetrics & 4,176.39 & -8,352.79 & -8,352.79 \\
+ & \textbf{GJR-GARCH(1,1)} & \textbf{4,204.86} & \textbf{-8,399.72} & \textbf{-8,374.04} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For both assets, \textbf{GJR-GARCH(1,1)} achieves superior goodness-of-fit, producing the highest Log-Likelihood and lowest AIC/BIC scores. This confirms that incorporating leverage asymmetry ($\gamma > 0$) improves conditional volatility forecasting relative to symmetric GARCH specifications.
+
+\subsection{Full Sample Volatility Dynamics}
+Figure \ref{fig:vol_dynamics} presents the full-sample $2\sigma_t$ conditional volatility bands overlaid against absolute log-returns $|y_t|$. All four models effectively trace the market regime shifts in 2022 and early 2025. However, RiskMetrics and EWMA exhibit excess sensitivity to single-day return spikes due to fixed memory weights.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.95\textwidth}
+        \includegraphics[width=\textwidth]{1.png}
+        \caption{CSPX.L (iShares Core S\&P 500)}
+    \end{subfigure}
+    \vskip 1em
+    \begin{subfigure}[b]{0.95\textwidth}
+        \includegraphics[width=\textwidth]{2.png}
+        \caption{VUAG.L (Vanguard FTSE 100)}
+    \end{subfigure}
+    \caption{Full Sample Volatility Dynamics ($2\sigma_t$) vs. Absolute Returns $|y_t|$.}
+    \label{fig:vol_dynamics}
+\end{figure}
+
+\subsection{Reaction to Tariffs Shock around Liberation Day (April 2, 2025)}
+To evaluate model adaptability under abrupt macro shocks, Figure \ref{fig:shock_reaction} examines a 2-month window surrounding the Liberation Day tariff announcement ($2025/04/02$).
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.95\textwidth}
+        \includegraphics[width=\textwidth]{3.png}
+        \caption{CSPX.L Tariff Shock Reaction}
+    \end{subfigure}
+    \vskip 1em
+    \begin{subfigure}[b]{0.95\textwidth}
+        \includegraphics[width=\textwidth]{4.png}
+        \caption{VUAG.L Tariff Shock Reaction}
+    \end{subfigure}
+    \caption{Volatility Reaction ($2\sigma_t$) around Liberation Day (2025-04-02).}
+    \label{fig:shock_reaction}
+\end{figure}
+
+Following the initial shock, absolute daily returns exceeded $4.5\%$. The GJR-GARCH model reacted immediately, increasing $2\sigma_t$ bounds sharply due to asymmetric leverage acceleration, whereas standard GARCH updated more conservatively.
+
+\subsection{Residual Diagnostics via Normal Quantile Transform}
+To verify whether standardized residuals $v_t = u_t / \sigma_t$ follow Gaussian assumptions, we compute the normal quantile transform $q_t = \Phi(v_t)$. If the model is correctly specified, $q_t \sim U(0,1)$. Figure \ref{fig:quantile_hist} shows the $q_t$ density histograms for both ETFs under GJR-GARCH.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{5.png}
+        \caption{CSPX.L Quantile Transform}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{6.png}
+        \caption{VUAG.L Quantile Transform}
+    \end{subfigure}
+    \caption{Normal Quantile Transform ($q_t$) Histograms against Uniform $U(0,1)$ Density.}
+    \label{fig:quantile_hist}
+\end{figure}
+
+The empirical densities align closely with the theoretical uniform $U(0,1)$ baseline, confirming that GJR-GARCH successfully eliminates conditional heteroskedasticity and tail dependence from the residuals.
+
+\subsection{Dynamic Conditional Correlation Analysis}
+Table \ref{tab:corr_breakdown} reports static correlation estimates across equal sub-samples.
+
+\begin{table}[H]
+\centering
+\caption{Standardized Residual Correlation Breakdown}
+\label{tab:corr_breakdown}
+\begin{tabular}{lc}
+\toprule
+\textbf{Sub-Sample Period} & \textbf{Correlation } $\boldsymbol{\rho(v_1, v_2)}$ \\
+\midrule
+Full Sample (2021--2025) & 0.8322 \\
+1st Third (Initial: Jan 2021 -- May 2022) & 0.8760 \\
+2nd Third (Middle: Jun 2022 -- Oct 2023) & 0.7550 \\
+3rd Third (Late/Tariffs: Nov 2023 -- Dec 2025) & 0.8612 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+While static correlation remains high ($0.7550$ -- $0.8760$), sub-sample variation confirms that cross-asset co-movement fluctuates over time. The estimated maximum likelihood DCC parameters are:
+\begin{itemize}
+    \item \textbf{Parameter $a$ (Shock Impact):} $0.1811$
+    \item \textbf{Parameter $b$ (Persistence):} $0.6679$
+    \item \textbf{Persistence ($a + b$):} $0.8490$
+\end{itemize}
+
+Figure \ref{fig:dcc_plot} plots the estimated time-varying correlation series $\rho_{12,t}$ against the static full-sample correlation benchmark ($0.8322$).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{7.png}
+    \caption{Dynamic Conditional Correlation $\rho_t$ (CSPX.L vs. VUAG.L) over Time.}
+    \label{fig:dcc_plot}
+\end{figure}
+
+The DCC path reveals significant short-term correlation fluctuations between $0.22$ and $0.96$. During severe market stress events, such as early 2022 and the 2025 tariff shock, correlation converges toward $0.90$, demonstrating that diversification benefits between US and UK broad equities decline during systemic market contractions.
+
+\newpage
+
+% ------------------------------------------------------------------ 5. Conclusion
+\section{Conclusion}
+This report evaluated univariate volatility models and dynamic correlation dynamics across LSE equity ETFs (\textbf{CSPX.L} and \textbf{VUAG.L}). The empirical results demonstrate that:
+\begin{enumerate}
+    \item \textbf{GJR-GARCH(1,1)} outperforms symmetric GARCH, EWMA, and RiskMetrics models across both assets, proving the importance of asymmetric leverage modeling in equity returns.
+    \item Residual quantile transform diagnostics ($q_t$) confirm that GJR-GARCH adequately filters conditional volatility clustering.
+    \item \textbf{DCC(1,1)} modeling reveals strong, time-varying cross-asset correlation ($a + b = 0.8490$) that spikes during major tariff and geopolitical shocks, offering key insights for dynamic hedging and international equity allocation.
+\end{enumerate}
+
+% ------------------------------------------------------------------ 6. Limitations
+\section{Limitations}
+While the empirical results provide robust evidence in favor of GJR-GARCH and DCC specifications, several limitations should be noted:
+\begin{enumerate}
+    \item \textbf{Distributional Assumptions:} The univariate and multivariate specifications were estimated assuming conditional Gaussian innovations. Although quantile transforms ($q_t$) indicated satisfactory coverage, Student's $t$ or Generalized Error Distributions (GED) could better capture residual tail fatness.
+    \item \textbf{High-Frequency Microstructure:} The sample relies on daily log-returns. Utilizing intra-day realized volatility measures (e.g., 5-minute sampled realized variance) could further refine conditional volatility response speed around macro announcements.
+    \item \textbf{Constant Unconditional Correlation in DCC:} Standard DCC assumes that the target matrix $S$ is constant across the full sample. In long time horizons, dynamic target-dependent correlation extensions (e.g., cDCC or regime-switching GARCH) may prevent target distortion during regime shifts.
+\end{enumerate}
+
+\newpage
+
+% ------------------------------------------------------------------ AI Disclosure & References
+\section*{AI Disclosure}
+In accordance with academic integrity guidelines of Vrije Universiteit Amsterdam, generative AI models (Gemini / ChatGPT) were utilized during the preparation of this project strictly as a coding assistant and text-formatting tool. Specifically, AI assistance was used for debugging Python parameter optimization routines, generating high-resolution Matplotlib export commands, and structuring raw empirical outputs into structured LaTeX code. All econometric models, parameter verifications, data filtering, and analytical interpretations were conducted and validated by the authors.
+
+\begin{thebibliography}{9}
+\bibitem{brooks} Brooks, C. (2019). \textit{Introductory Econometrics for Finance}. 4th ed., Cambridge University Press.
+\bibitem{engle} Engle, R. (2002). Dynamic Conditional Correlation: A Simple Class of Multivariate Generalized Autoregressive Conditional Heteroskedasticity Models. \textit{Journal of Business \& Economic Statistics}, 20(3), 339--350.
+\bibitem{gjr} Glosten, L. R., Jagannathan, R., \& Runkle, D. E. (1993). On the Relation between the Expected Value and the Volatility of the Nominal Excess Return on Stocks. \textit{Journal of Finance}, 48(5), 1779--1801.
+\end{thebibliography}
+
+\end{document}
