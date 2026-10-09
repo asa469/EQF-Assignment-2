@@ -15,6 +15,8 @@
 \usepackage[hidelinks]{hyperref}
 
 \captionsetup{font=small,labelfont=bf}
+\graphicspath{{output/}}
+\setlength{\emergencystretch}{3em}   % avoid long file names running into the margin
 
 % Float placement behavior
 \renewcommand{\topfraction}{0.9}
@@ -33,7 +35,7 @@
 \vspace*{3cm}
 {\LARGE\bfseries Applied Volatility Modeling and Dynamic Conditional Correlation\par}
 \vspace{0.8cm}
-{\large An Empirical Evaluation of GARCH, Asymmetric, and DCC Specifications in LSE Equity ETFs\par}
+{\large An Empirical Evaluation of GARCH, Asymmetric, and DCC Specifications for Two S\&P~500 ETFs on the LSE\par}
 \vspace{2.5cm}
 \rule{\textwidth}{0.8pt}\par
 \vspace{0.4cm}
@@ -42,7 +44,7 @@
 \vspace*{1.4cm}
 \textbf{Authors:}\\
 Arnav Srivastava\\
-L\'evi Th\'e
+L\'evi The
 \end{minipage}\hfill
 \begin{minipage}[t]{0.48\textwidth}
 \raggedleft
@@ -61,244 +63,529 @@ Vrije Universiteit Amsterdam
 \end{titlepage}
 \hypersetup{pageanchor=true}
 
-\newpage
-
 % ------------------------------------------------------------------ Abstract
 \section*{Abstract}
-This paper provides a rigorous empirical evaluation of univariate and multivariate conditional volatility specifications applied to two London Stock Exchange (LSE) equity benchmark Exchange-Traded Funds: \textbf{CSPX.L} (iShares Core S\&P 500 UCITS ETF) and \textbf{VUAG.L} (Vanguard FTSE 100 UCITS ETF). Spanning the complete trading sample from January 2021 through December 2025 ($T = 1,258$ observations), we estimate three baseline specifications ($\text{GARCH}(1,1)$, EWMA, and RiskMetrics) alongside an asymmetric specification ($\text{GJR-GARCH}(1,1)$). Model performance is evaluated using Log-Likelihood, AIC, BIC, and residual normal quantile transform distributions ($q_t$). We further analyze structural volatility reactions around the global trade shock of Liberation Day (April 2, 2025). Finally, a Dynamic Conditional Correlation ($\text{DCC-GARCH}$) model is estimated to evaluate dynamic cross-asset co-movement stability and sub-sample correlation breakdowns.
+This paper evaluates conditional volatility and correlation models for two London Stock Exchange ETFs
+on the S\&P~500: \textbf{CSPX.L} (iShares, quoted in US dollars) and \textbf{VUAG.L} (Vanguard, quoted in
+pounds), using $T=1{,}258$ daily returns from 2021 to 2025. GARCH(1,1) clearly beats EWMA and RiskMetrics,
+and BIC selects GJR(1,1,1) from 36 GJR specifications for both funds. In this model negative shocks
+drive volatility, with no measurable effect of positive ones. GJR reacted fastest to the Liberation Day tariff shock (2 April 2025) and, estimated
+on 2021--2024, gives the best one-day-ahead variance forecasts for 2025. All Gaussian models leave
+fat-tailed residuals; Student-$t$ errors ($\nu\approx5$) remove most of this misfit. A DCC model shows a
+correlation between 0.44 and 0.93 that falls when the pound/dollar rate is volatile and rose to near its
+sample maximum just after Liberation Day.
 
 % ------------------------------------------------------------------ 1. Introduction
 \section{Introduction}
-Time-varying volatility and conditional variance clustering represent fundamental stylised facts across empirical equity returns (Brooks, 2019). Understanding how financial asset volatilities evolve over time—and how cross-asset correlations shift during periods of macro stress—is critical for risk management, asset allocation, and option pricing. 
+Volatility clustering is a well-known stylised fact of equity returns, and since volatility cannot be
+observed it must be measured through a model. \citet[Chapter~9]{brooks2019} discusses several such
+measures, from exponentially weighted moving averages to GARCH-type models. This paper asks which of them
+works best in practice.
 
-This paper evaluates univariate conditional heteroskedasticity models and bivariate dynamic correlation filters across two highly liquid broad equity benchmark ETFs traded on the London Stock Exchange (LSE). By utilizing primary LSE market data from 2021 through 2025, we examine whether asymmetric shock responsiveness ($\text{GJR-GARCH}$) outperforms symmetric formulations ($\text{GARCH}$, EWMA, RiskMetrics), and how cross-border correlation responds to major geopolitical trade events.
+We compare GARCH(1,1), its restricted versions EWMA and RiskMetrics, and the asymmetric GJR model of
+\citet{glosten1993}. We judge them by likelihood, information criteria, their reaction to the tariff
+shock of April 2025, the distribution of their standardised residuals and, because in-sample fit can
+flatter larger models, by the quality of their out-of-sample forecasts for 2025. As an extension, we study the
+correlation between the two funds with the dynamic conditional correlation (DCC) model of
+\citet{engle2002}.
 
-\newpage
+Because both ETFs hold the S\&P~500 but are quoted in different currencies, their returns differ by the
+pound/dollar exchange rate, so their correlation measures how much currency risk matters relative to
+equity risk.
+
 % ------------------------------------------------------------------ 2. Data
-\section{Data}
+\section{Data}\label{sec:data}
 
 \subsection{Asset Selection Methodology}
-Given our focus on the London Stock Exchange (LSE) universe, the pair \textbf{CSPX.L} (iShares Core S\&P 500 UCITS ETF) and \textbf{VUAG.L} (Vanguard FTSE 100 UCITS ETF) was filtered based on four structural criteria:
+From the LSE ETF universe of the first assignment we selected \textbf{CSPX.L} and \textbf{VUAG.L}
+because they are:
 \begin{enumerate}
-    \item \textbf{Benchmark Representation:} \textbf{CSPX.L} and \textbf{VUAG.L} represent ultra-large-cap flagship funds tracking the US and UK equity markets, respectively, providing high liquidity and minimal bid-ask spreads.
-    \item \textbf{Accumulating Share Class:} Both funds automatically reinvest dividends into the NAV, eliminating dividend payout discontinuities and enabling precise continuous log-return calculations directly from price series.
-    \item \textbf{Exclusion of Non-Standard ETPs:} Leveraged, inverse, and synthetic instruments were excluded to prevent daily path-dependent reset distortions in conditional variance estimation.
-    \item \textbf{Complete Calendar Alignment:} Slicing the full LSE dataset across January 2021--December 2025 yielded $T = 1,258$ synchronized trading sessions with zero missing values.
+    \item \textbf{Benchmark funds:} large, liquid S\&P~500 funds, the US-dollar line of iShares and the
+    sterling line of Vanguard. VUAG.L returns have a correlation of 0.993 with VUSA.L (Vanguard's
+    distributing S\&P~500 line) but only 0.58 with FTSE~100 ETFs.
+    \item \textbf{Accumulating:} dividends are reinvested, so the yearly dividend adjustment of this data
+    set causes no jumps at year ends.
+    \item \textbf{Plain physical funds:} leveraged and inverse products are avoided, because their daily
+    resets distort the conditional variance.
+    \item \textbf{Complete:} both have prices on all 1,259 trading days of 2021--2025; the 31 dates
+    without prices are UK bank holidays and are dropped.
 \end{enumerate}
 
-\subsection{Descriptive Statistics}
-Both price series were aligned on matching exchange trading days over the 5-year sample period (January 4, 2021 -- December 30, 2025), yielding $T = 1,258$ clean daily log-returns $y_t = \ln(P_t / P_{t-1})$ processed in-memory via pandas DataFrames. Table \ref{tab:summary_stats} reports summary descriptive statistics for both return series.
+\subsection{Returns and Descriptive Statistics}
+We compute daily log-returns in percent, $y_t = 100\,(\ln P_t - \ln P_{t-1})$, which gives $T=1{,}258$
+returns from 5 January 2021 to 30 December 2025, computed directly from the course price file
+\texttt{etf\_full-L.csv}.
 
-\begin{table}[H]
+Since both funds hold the same index, the difference of their returns is approximately the change in the
+exchange rate, $y^{\text{CSPX}}_t - y^{\text{VUAG}}_t \approx \Delta\ln(\text{USD per GBP})_t$. This
+difference has a standard deviation of 0.54\% per day. Its largest values all occur during the UK
+`mini-budget' crisis and the following sterling swings of autumn 2022, from $-3.05\%$ on 23 September to
+$+2.67\%$ on 1 December 2022. The return correlation is 0.85 over the full
+sample.
+
+Table~\ref{tab:summary_stats} shows a small positive mean, negative skewness and excess kurtosis of about
+3 for both funds. Normality is rejected, and the Ljung--Box test on squared returns shows strong
+volatility clustering. VUAG.L is less volatile than CSPX.L (14.6\% against 16.1\% per year). The dollar
+tends to strengthen when US equities fall: the correlation between the CSPX.L return and the currency
+difference above is 0.44. For a sterling investor, the currency therefore softens equity losses.
+
+\begin{table}[htbp]
 \centering
-\caption{Descriptive Summary Statistics of Daily Log-Returns (2021--2025)}
+\caption{Descriptive summary statistics of daily log-returns (\%), 2021--2025, $T=1{,}258$}
 \label{tab:summary_stats}
-\begin{tabular}{lcccccc}
-\toprule
-\textbf{Asset} & \textbf{Mean (\%)} & \textbf{Std. Dev (\%)} & \textbf{Ann. Vol (\%)} & \textbf{Skewness} & \textbf{Kurtosis} & \textbf{Obs.} \\
-\midrule
-\textbf{CSPX.L} & 0.0543 & 1.015 & 16.11 & -0.326 & 2.722 & 1,258 \\
-\textbf{VUAG.L} & 0.0550 & 0.917 & 14.56 & -0.345 & 3.022 & 1,258 \\
-\bottomrule
-\end{tabular}
+\footnotesize
+\setlength{\tabcolsep}{4.5pt}
+\input{output/tab_desc.tex}
+\par\smallskip
+\begin{minipage}{0.95\textwidth}\footnotesize
+Ann.\ vol.: standard deviation $\times\sqrt{252}$ in \%. Exc.\ kurt.: excess kurtosis. JB: Jarque--Bera
+test of normality. LB$_{10}(y^2)$: Ljung--Box test with 10 lags on squared returns.
+\end{minipage}
 \end{table}
 
-Both assets exhibit slight negative skewness and moderate excess kurtosis, highlighting the fat-tailed return distributions typical of broad equity index benchmarks.
-
-\newpage
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_returns.pdf}
+\caption{Daily log-returns of CSPX.L (US dollar) and VUAG.L (pound sterling).}
+\label{fig:returns}
+\end{figure}
 
 % ------------------------------------------------------------------ 3. Methodology
-\section{Methodology}
+\section{Methodology}\label{sec:method}
 
-\subsection{Univariate Volatility Models}
-We estimate four univariate conditional variance specifications for each asset return series $y_t = \mu + u_t$, where $u_t = \sigma_t \varepsilon_t$ and $\varepsilon_t \sim \mathcal{N}(0, 1)$:
-
+\subsection{Baseline Volatility Models}
+All models share the observation equation $y_t \sim \mathcal{N}(\mu, \sigma_t^2)$ with $u_t = y_t - \mu$.
+We use the notation of the assignment:
 \begin{enumerate}
     \item \textbf{GARCH(1,1)}:
     \begin{equation}
-        \sigma_t^2 = \omega + \alpha u_{t-1}^2 + \beta \sigma_{t-1}^2
+        \sigma_{t+1}^2 = \omega + \alpha u_t^2 + \delta \sigma_t^2 .
     \end{equation}
-    
-    \item \textbf{Exponentially Weighted Moving Average (EWMA)} ($\omega = 0, \alpha = 1 - \delta$):
+    \item \textbf{Exponentially Weighted Moving Average (EWMA)}: the restriction $\omega = 0$,
+    $\alpha = 1 - \delta$ gives
     \begin{equation}
-        \sigma_t^2 = (1 - \delta) u_{t-1}^2 + \delta \sigma_{t-1}^2
+        \sigma_{t+1}^2 = (1 - \delta)\, u_t^2 + \delta \sigma_t^2 ,
     \end{equation}
-    
-    \item \textbf{RiskMetrics} ($\omega = 0, \delta = 0.94, \alpha = 0.06$):
+    with free parameters $\mu$ and $\delta$. The variance is integrated and has no long-run level.
+    \item \textbf{RiskMetrics}: in addition $\delta = 0.94$ and $\mu = \bar y$, so nothing is optimised:
     \begin{equation}
-        \sigma_t^2 = 0.06 u_{t-1}^2 + 0.94 \sigma_{t-1}^2
+        \sigma_{t+1}^2 = 0.06\, u_t^2 + 0.94\, \sigma_t^2 .
     \end{equation}
-    
-    \item \textbf{GJR-GARCH(1,1)} (Glosten, Jagannathan, and Runkle, 1993):
-    \begin{equation}
-        \sigma_t^2 = \omega + \alpha u_{t-1}^2 + \gamma u_{t-1}^2 \mathbb{I}_{\{u_{t-1} < 0\}} + \beta \sigma_{t-1}^2
-    \end{equation}
+    We count $\mu$ as one parameter in the information criteria.
 \end{enumerate}
+
+\subsection{Advanced Model: GJR-GARCH}
+As the advanced model we use the GJR model \citep{glosten1993},
+\begin{equation}
+    \sigma_{t+1}^2 = \omega + \sum_{j=1}^{q}\alpha_j u^2_{t-j+1} + \sum_{i=1}^{p}\delta_i\sigma^2_{t-i+1}
+    + \sum_{k=1}^{o}\gamma_k u^2_{t-k+1}\,\mathbb{I}_{\{u_{t-k+1}<0\}},
+\end{equation}
+for all 36 combinations of $p\in\{0,1,2,3\}$, $q\in\{1,2,3\}$ and $o\in\{0,1,2\}$. With $\gamma_k>0$ a
+negative return raises the next variance more than a positive return of the same size (the leverage
+effect). GARCH(1,1) is the special case GJR(1,1,0).
+
+As a robustness check we re-estimate the selected GJR model with Student-$t$ errors,
+$u_t=\sigma_t\varepsilon_t$ with $\varepsilon_t\sqrt{\nu/(\nu-2)}\sim t_\nu$, so that $\varepsilon_t$ has
+unit variance and $\nu>2$ measures the tail thickness. The normal model is the limit $\nu\to\infty$.
+
+\subsection{Estimation and Model Comparison}
+All models are estimated by maximum likelihood with the Gaussian log-likelihood
+\begin{equation}
+    \log L(\theta) = -\tfrac12\sum_{t=1}^{T}\Bigl(\ln 2\pi + \ln\sigma_t^2 + u_t^2/\sigma_t^2\Bigr).
+\end{equation}
+The recursion starts at $\sigma_1^2=T^{-1}\sum_t u_t^2$, and pre-sample values are set to the same value.
+We impose $\omega>0$, $\alpha_j,\delta_i\ge0$, a non-negative response to negative shocks at each lag
+($\alpha_k+\gamma_k\ge0$) and $\sum\alpha_j+\sum\delta_i+\tfrac12\sum\gamma_k<1$. The optimiser (SLSQP)
+starts from several values, including the optimum of every model nested one order lower. This
+guarantees that a larger model never ends up with a lower likelihood than a model nested in it, which we
+verified for all 36 models. We work with returns in percent, because with raw returns $\omega$ is of
+order $10^{-5}$, which makes the numerical optimisation badly scaled.
+
+Standard errors come from a numerical Hessian. Normality is clearly rejected (Section~\ref{sec:diag}), so
+we treat the estimates as quasi-maximum likelihood and report the robust sandwich standard errors of
+\citet{bollerslev1992}. When a parameter lies on the boundary of the parameter space (such as
+$\hat\alpha_1=0$ below), its standard error and the usual $\chi^2$ distribution of likelihood ratio (LR)
+tests are not valid, and we interpret them with care.
+
+To compare models we use LR tests for nested models (EWMA within GARCH, RiskMetrics within EWMA, GARCH
+within GJR) and AIC and BIC for non-nested models. We also check whether the standardised residuals
+$v_t = u_t/\sigma_t$ behave as the model implies.
+
+\subsection{Out-of-Sample Forecast Evaluation}
+We estimate every model once on 2021--2024 (1,007 returns), re-selecting the GJR order by BIC on this
+period only, and keep the parameters fixed. Running the recursion through 2025 then gives one-day-ahead
+forecasts $\sigma^2_t$ for the 251 trading days of 2025 that use only returns up to $t-1$. Since the true
+variance is not observed, we use $y_t^2$ as proxy and evaluate the forecasts with the QLIKE loss
+$\ln\sigma_t^2 + y_t^2/\sigma_t^2$ and the squared error $(y_t^2-\sigma_t^2)^2$. QLIKE is robust to the
+noise in the proxy and penalises under-prediction more heavily \citep{patton2011}. Equal predictive accuracy
+against GJR is tested with the \citet{diebold1995} test, using a Newey--West variance with five lags. We
+also report the predictive log-likelihood and the share of days with $|u_t|>2\sigma_t$, which should be
+about 4.6\% under normality.
 
 \subsection{Dynamic Conditional Correlation (DCC)}
-Using standardized residuals $v_{1,t}$ and $v_{2,t}$ extracted from the optimal GJR-GARCH specifications, we examine bivariate cross-asset correlation using the Engle (2002) $\text{DCC}(1,1)$ filter:
+Using the standardised residuals $v_t=(v_{1t},v_{2t})'$ of the selected GJR models and
+$S = \operatorname{var}(v)$, we estimate the correlation part of the DCC(1,1) model of
+\citet{engle2002}:
 \begin{align}
-    Q_{t+1} &= S (1 - a - b) + a (v_t v_t') + b Q_t \\
-    R_{t+1} &= (\text{diag } Q_{t+1})^{-1/2} Q_{t+1} (\text{diag } Q_{t+1})^{-1/2}
+    Q_{t+1} &= S\,(1 - a - b) + a\, v_t v_t' + b\, Q_t , \qquad Q_1 = S,\\
+    R_{t+1} &= (\operatorname{diag} Q_{t+1})^{-1/2}\, Q_{t+1}\, (\operatorname{diag} Q_{t+1})^{-1/2},
 \end{align}
-where $S$ represents the unconditional covariance matrix of standardized residuals, $a$ captures short-term innovation shocks, and $b$ measures correlation persistence.
-
-\newpage
+and maximise $\sum_t \log\phi_2(v_t; 0, R_t)$ over $(a,b)$. Here $a$ measures the reaction of the
+correlation to new shocks and $b$ its persistence. The correlation $R_t$ used to evaluate $v_t$ depends
+only on $v_1,\dots,v_{t-1}$ (given $S$ and the first-step GJR estimates, which use the full sample).
 
 % ------------------------------------------------------------------ 4. Results
-\section{Results}
+\section{Univariate Results}\label{sec:results}
+
+\subsection{Choice of the GJR Model}
+Table~\ref{tab:grid_top} lists the five best GJR models by BIC; Table~\ref{tab:grid} in the appendix gives
+all 36. The lagged variance is
+the most important ingredient. Without it ($p=0$, ARCH models) the fit is much worse, and even three
+ARCH lags fall far short of a single $\delta_1$. The asymmetry term comes next: moving from $o=0$ to
+$o=1$ raises the log-likelihood by about 34 (CSPX.L) and 32 (VUAG.L) points. Additional ARCH lags
+($q>1$) add almost nothing. Once the asymmetry term is included their estimates go to zero, so many of
+the larger models reproduce the likelihood of a smaller one and are penalised for the extra parameters.
+
+BIC selects GJR(1,1,1) for both series. AIC prefers GJR(2,1,1) for CSPX.L and GJR(3,1,2) for VUAG.L, but
+only by 0.2 points. LR tests do not reject GJR(1,1,1) against these models ($p=0.14$ and $p=0.10$). We
+therefore use GJR(1,1,1) for both series, which also gives one specification for the DCC model.
+
+\begin{table}[htbp]
+\centering
+\caption{The five best GJR$(p,q,o)$ models by BIC, and GARCH(1,1)}\label{tab:grid_top}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\input{output/tab_grid_top.tex}
+\par\smallskip
+\begin{minipage}{0.95\textwidth}\footnotesize
+$p$: lags of $\sigma^2_t$, $q$: lags of $u_t^2$, $o$: asymmetric lags. $\Delta$BIC: difference with the
+best model. All 36 models are in Table~\ref{tab:grid} in the appendix.
+\end{minipage}
+\end{table}
 
 \subsection{Estimation Results and Model Selection}
-All models were optimized using Maximum Likelihood Estimation (MLE) under Gaussian innovation assumptions using L-BFGS-B numerical optimization. Table \ref{tab:model_comparison} details the Log-Likelihood ($\ln L$), Akaike Information Criterion (AIC), and Bayesian Information Criterion (BIC) for both ETFs.
+Table~\ref{tab:params} reports the estimates, robust standard errors, log-likelihoods and information
+criteria of the four models, and Table~\ref{tab:lr} the LR tests.
 
-\begin{table}[H]
+The mean return is about 0.05--0.09\% per day. For GARCH(1,1), $\hat\alpha=0.13$ (CSPX.L) and $0.10$
+(VUAG.L) and $\hat\delta=0.83$ and $0.86$. Persistence is about 0.96, so a shock to the variance has a
+half-life of about 15 trading days. The implied unconditional variance
+$\hat\omega/(1-\hat\alpha-\hat\delta)$ equals 1.04 and 0.86, close to the sample variances.
+
+The EWMA estimates of $\delta$ are 0.946 and 0.952, close to the RiskMetrics value 0.94, and the LR test
+does not reject RiskMetrics against EWMA. The restriction that turns GARCH into EWMA, however, is
+strongly rejected (LR of 47 and 46 with two degrees of freedom). The data prefer a variance that reverts
+to a long-run level and reacts more strongly to new shocks.
+
+For both assets \textbf{GJR(1,1,1)} gives the highest log-likelihood and the lowest AIC and BIC. Its
+$\hat\alpha_1$ is zero in both series, while $\hat\gamma_1=0.22$ and $0.19$ with robust standard errors of
+0.05. Volatility is thus driven by falling prices, and the data show no measurable effect of positive
+returns, a strong form of the leverage effect. Because $\hat\alpha_1$ lies on the boundary its standard
+error is not reliable, and a small positive $\alpha_1$ cannot be ruled out. Still, the asymmetry is convincing: GJR improves on GARCH(1,1) by about 34 log-likelihood
+points for one extra parameter.
+
+Most parameters are precisely estimated. The exception is $\omega$ for CSPX.L (robust $t\approx1.6$).
+
+The last column re-estimates GJR(1,1,1) with Student-$t$ errors. The estimated degrees of freedom are
+$\hat\nu=5.3$ and $5.2$, far from the normal limit, and the log-likelihood rises by 31 and 38 points for
+one extra parameter. The variance dynamics hardly change ($\hat\alpha_1=0$, $\hat\delta_1=0.84$,
+$\hat\gamma_1=0.27$ and $0.21$), so the asymmetry is not an artefact of the normal assumption. For CSPX.L
+the robust standard errors of the $t$ model are large (for example 0.29 for $\hat\delta_1$, against 0.09
+non-robust). The large gap between the two suggests that the $t$ model is still misspecified, plausibly
+because of the negative skewness discussed in Section~\ref{sec:diag}.
+
+\begin{table}[htbp]
 \centering
-\caption{Model Comparison and Information Criteria}
-\label{tab:model_comparison}
-\begin{tabular}{llccc}
-\toprule
-\textbf{Asset} & \textbf{Model} & \textbf{Log-Likelihood} & \textbf{AIC} & \textbf{BIC} \\
-\midrule
-\textbf{CSPX.L} & GARCH(1,1) & 4,096.27 & -8,184.55 & -8,164.00 \\
- & EWMA & 4,086.14 & -8,168.29 & -8,158.01 \\
- & RiskMetrics & 4,085.55 & -8,171.09 & -8,171.09 \\
- & \textbf{GJR-GARCH(1,1)} & \textbf{4,106.84} & \textbf{-8,203.68} & \textbf{-8,177.99} \\
-\midrule
-\textbf{VUAG.L} & GARCH(1,1) & 4,194.22 & -8,380.45 & -8,359.90 \\
- & EWMA & 4,177.85 & -8,351.71 & -8,341.44 \\
- & RiskMetrics & 4,176.39 & -8,352.79 & -8,352.79 \\
- & \textbf{GJR-GARCH(1,1)} & \textbf{4,204.86} & \textbf{-8,399.72} & \textbf{-8,374.04} \\
-\bottomrule
-\end{tabular}
+\caption{Parameter estimates and model comparison}\label{tab:params}
+\footnotesize
+\input{output/tab_params.tex}
+\par\smallskip
+\begin{minipage}{0.95\textwidth}\footnotesize
+Robust (sandwich) standard errors in parentheses. Values in italics are fixed by the model restrictions;
+for RiskMetrics $\mu=\bar y$, and the reported standard error is that of the sample mean. Persistence:
+$\sum\alpha_j+\sum\delta_i+\frac12\sum\gamma_k$. GJR(1,1,1)-$t$: Student-$t$ errors with $\nu$
+degrees of freedom.
+\end{minipage}
 \end{table}
 
-For both assets, \textbf{GJR-GARCH(1,1)} achieves superior goodness-of-fit, producing the highest Log-Likelihood and lowest AIC/BIC scores. This confirms that incorporating leverage asymmetry ($\gamma > 0$) improves conditional volatility forecasting relative to symmetric GARCH specifications.
+\begin{table}[htbp]
+\centering
+\caption{Likelihood ratio tests of nested models}\label{tab:lr}
+\small
+\input{output/tab_lr.tex}
+\par\smallskip
+\begin{minipage}{0.95\textwidth}\footnotesize
+$p$-values from the $\chi^2_{\text{df}}$ distribution. Because $\hat\alpha_1=0$ in the GJR model, the last
+test involves a boundary, and its $p$-value is approximate. The statistic is far beyond any critical value,
+however.
+\end{minipage}
+\end{table}
 
 \subsection{Full Sample Volatility Dynamics}
-Figure \ref{fig:vol_dynamics} presents the full-sample $2\sigma_t$ conditional volatility bands overlaid against absolute log-returns $|y_t|$. All four models effectively trace the market regime shifts in 2022 and early 2025. However, RiskMetrics and EWMA exhibit excess sensitivity to single-day return spikes due to fixed memory weights.
+Figure~\ref{fig:vol_dynamics} plots the full-sample $2\sigma_t$ bands of the four models against the
+absolute returns $|y_t|$. All models trace the main regimes: the 2022 bear market, the calm of
+2023--2024, the short spike of August 2024 and the tariff shock of 2025. They differ in timing and
+amplitude. GJR has the sharpest peaks after market falls, and in rising markets it often gives the lowest
+volatility. EWMA and RiskMetrics are the smoothest. They react weakly to a single large return
+($\alpha\approx0.05$), but stay elevated for a long time because they lack mean reversion. GARCH lies in
+between.
 
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}[b]{0.95\textwidth}
-        \includegraphics[width=\textwidth]{1.png}
-        \caption{CSPX.L (iShares Core S\&P 500)}
-    \end{subfigure}
-    \vskip 1em
-    \begin{subfigure}[b]{0.95\textwidth}
-        \includegraphics[width=\textwidth]{2.png}
-        \caption{VUAG.L (Vanguard FTSE 100)}
-    \end{subfigure}
-    \caption{Full Sample Volatility Dynamics ($2\sigma_t$) vs. Absolute Returns $|y_t|$.}
-    \label{fig:vol_dynamics}
-\end{figure}
-
-\subsection{Reaction to Tariffs Shock around Liberation Day (April 2, 2025)}
-To evaluate model adaptability under abrupt macro shocks, Figure \ref{fig:shock_reaction} examines a 2-month window surrounding the Liberation Day tariff announcement ($2025/04/02$).
-
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}[b]{0.95\textwidth}
-        \includegraphics[width=\textwidth]{3.png}
-        \caption{CSPX.L Tariff Shock Reaction}
-    \end{subfigure}
-    \vskip 1em
-    \begin{subfigure}[b]{0.95\textwidth}
-        \includegraphics[width=\textwidth]{4.png}
-        \caption{VUAG.L Tariff Shock Reaction}
-    \end{subfigure}
-    \caption{Volatility Reaction ($2\sigma_t$) around Liberation Day (2025-04-02).}
-    \label{fig:shock_reaction}
-\end{figure}
-
-Following the initial shock, absolute daily returns exceeded $4.5\%$. The GJR-GARCH model reacted immediately, increasing $2\sigma_t$ bounds sharply due to asymmetric leverage acceleration, whereas standard GARCH updated more conservatively.
-
-\subsection{Residual Diagnostics via Normal Quantile Transform}
-To verify whether standardized residuals $v_t = u_t / \sigma_t$ follow Gaussian assumptions, we compute the normal quantile transform $q_t = \Phi(v_t)$. If the model is correctly specified, $q_t \sim U(0,1)$. Figure \ref{fig:quantile_hist} shows the $q_t$ density histograms for both ETFs under GJR-GARCH.
-
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}[b]{0.48\textwidth}
-        \includegraphics[width=\textwidth]{5.png}
-        \caption{CSPX.L Quantile Transform}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.48\textwidth}
-        \includegraphics[width=\textwidth]{6.png}
-        \caption{VUAG.L Quantile Transform}
-    \end{subfigure}
-    \caption{Normal Quantile Transform ($q_t$) Histograms against Uniform $U(0,1)$ Density.}
-    \label{fig:quantile_hist}
-\end{figure}
-
-The empirical densities align closely with the theoretical uniform $U(0,1)$ baseline, confirming that GJR-GARCH successfully eliminates conditional heteroskedasticity and tail dependence from the residuals.
-
-\subsection{Dynamic Conditional Correlation Analysis}
-Table \ref{tab:corr_breakdown} reports static correlation estimates across equal sub-samples.
-
-\begin{table}[H]
+\begin{figure}[htbp]
 \centering
-\caption{Standardized Residual Correlation Breakdown}
-\label{tab:corr_breakdown}
-\begin{tabular}{lc}
-\toprule
-\textbf{Sub-Sample Period} & \textbf{Correlation } $\boldsymbol{\rho(v_1, v_2)}$ \\
-\midrule
-Full Sample (2021--2025) & 0.8322 \\
-1st Third (Initial: Jan 2021 -- May 2022) & 0.8760 \\
-2nd Third (Middle: Jun 2022 -- Oct 2023) & 0.7550 \\
-3rd Third (Late/Tariffs: Nov 2023 -- Dec 2025) & 0.8612 \\
-\bottomrule
-\end{tabular}
+\includegraphics[width=\textwidth]{fig_vol_full.pdf}
+\caption{Full sample volatility dynamics: $2\sigma_t$ of the four models against absolute returns $|y_t|$
+(grey).}
+\label{fig:vol_dynamics}
+\end{figure}
+
+\subsection{Reaction to the Tariff Shock around Liberation Day (April 2, 2025)}
+The tariffs were announced on 2 April 2025, after the London close. Figure~\ref{fig:shock_reaction} zooms
+in on this period. For the first London return after the announcement (3 April) all models predicted
+$2\sigma_t\approx2.1$--$2.3\%$, but the returns were $-3.8\%$ (CSPX.L) and $-4.9\%$ (VUAG.L). VUAG.L fell
+more because the dollar weakened as well, so here the dollar did not act as a safe haven.
+
+The next day GJR raised $2\sigma_t$ to 4.2\% and 4.8\%, GARCH to 3.5\% and 3.7\%, and EWMA only to 2.8\%
+and 3.0\%. GJR peaked at 6.7\% and 5.8\% within a week, close to the realised absolute returns of 4--5\%;
+EWMA and RiskMetrics peaked at only 4.2--5.1\%, and only on 11 April. The rebound of up to 5\% after the
+tariff pause (9 April) barely moves GJR, whose volatility falls from 11 April while GARCH still rises. By
+early May GJR is back near its pre-shock level, whereas EWMA and RiskMetrics still give
+$2\sigma_t\approx3.6\%$. GJR thus captured both the build-up and the decay of the shock best.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_vol_liberation.pdf}
+\caption{Volatility reaction ($2\sigma_t$) around Liberation Day (dotted line, 2 April 2025),
+17 March -- 9 May 2025.}
+\label{fig:shock_reaction}
+\end{figure}
+
+\subsection{Residual Diagnostics via Normal Quantile Transform}\label{sec:diag}
+If a model is correctly specified, $v_t = u_t/\sigma_t \sim \mathcal{N}(0,1)$ and the normal quantile
+transform $q_t = \Phi(v_t)$ is uniform on $(0,1)$. (We use $\Phi$, the probability integral transform;
+$\Phi^{-1}$ as written in the assignment would map to the real line instead.) For the Student-$t$ model
+$\Phi$ is replaced by the cdf of the standardised $t_{\hat\nu}$ distribution.
+Figure~\ref{fig:quantile_hist} shows the histograms of $q_t$, and Table~\ref{tab:diag} reports formal
+tests.
+
+The volatility dynamics are captured well. No model leaves significant autocorrelation in $v_t^2$, and
+GARCH and GJR give $v_t$ a standard deviation of 1.00. EWMA and RiskMetrics give 1.04--1.05, because
+their variance is not tied to the level of the data. The shape of the distribution, however, is not
+normal. The histograms have too many observations in the middle and in the outermost
+bins and too few at moderate quantiles. This is the signature of fatter tails than the normal. The excess
+kurtosis of $v_t$ is 1.3--2.6, and both the Kolmogorov--Smirnov and the $\chi^2$ test reject uniformity
+for every Gaussian model. The lowest bin is higher than the highest one, reflecting the remaining
+negative skewness. GJR reduces the kurtosis most (1.34 and 1.77) but does not remove it.
+
+With Student-$t$ errors the histograms become nearly flat (last column of Figure~\ref{fig:quantile_hist}).
+The KS test no longer rejects ($p=0.40$ and $0.94$), and for VUAG.L neither does the $\chi^2$ test
+($p=0.43$). For CSPX.L the $\chi^2$ test still rejects ($p=0.002$): the lowest bin is too full, because the
+symmetric $t$ cannot capture the skewness of $-0.5$. The fat tails are therefore the main failure of the
+Gaussian models; a skewed-$t$ distribution would be the natural next step.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_qt.pdf}
+\caption{Histograms of $q_t$ (20 bins) for the four Gaussian models and GJR(1,1,1) with Student-$t$
+errors, against the uniform $U(0,1)$ density (dashed).}
+\label{fig:quantile_hist}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Diagnostics of the standardised residuals $v_t$ and of $q_t=\Phi(v_t)$}\label{tab:diag}
+\footnotesize
+\setlength{\tabcolsep}{4.5pt}
+\input{output/tab_diag.tex}
+\par\smallskip
+\begin{minipage}{0.95\textwidth}\footnotesize
+JB: Jarque--Bera test of normality of $v_t$. LB$_{10}(v^2)$: Ljung--Box test (10 lags) on $v_t^2$.
+KS: Kolmogorov--Smirnov test of $q_t\sim U(0,1)$. $\chi^2_9$: Pearson test of equal counts in 10 bins of
+$q_t$. For GJR(1,1,1)-$t$, $q_t$ uses the Student-$t$ cdf; JB still tests normality of $v_t$.
+\end{minipage}
 \end{table}
 
-While static correlation remains high ($0.7550$ -- $0.8760$), sub-sample variation confirms that cross-asset co-movement fluctuates over time. The estimated maximum likelihood DCC parameters are:
-\begin{itemize}
-    \item \textbf{Parameter $a$ (Shock Impact):} $0.1811$
-    \item \textbf{Parameter $b$ (Persistence):} $0.6679$
-    \item \textbf{Persistence ($a + b$):} $0.8490$
-\end{itemize}
+% ------------------------------------------------------------------ Forecasts
+\section{Out-of-Sample Forecasts for 2025}\label{sec:forecast}
+Estimated on 2021--2024 alone, BIC again selects GJR(1,1,1) for both series, with $\hat\alpha_1=0$ and
+$\hat\gamma_1\approx0.2$, so the model choice is stable over time. Table~\ref{tab:forecast} evaluates the
+forecasts for 2025.
 
-Figure \ref{fig:dcc_plot} plots the estimated time-varying correlation series $\rho_{12,t}$ against the static full-sample correlation benchmark ($0.8322$).
+The ranking of Section~\ref{sec:results} holds out of sample. GJR(1,1,1) has the lowest QLIKE for both
+series, followed by GARCH(1,1), RiskMetrics and EWMA. The Diebold--Mariano test shows that GJR is
+significantly better than EWMA and RiskMetrics for both funds ($p\le0.02$), and than GARCH for CSPX.L
+($p=0.02$), but not for VUAG.L ($p=0.40$). April 2025 contributes a large share of the gain, but not all
+of it: without that month the QLIKE differences shrink, yet EWMA and RiskMetrics remain worse at about the
+5\% level. The squared
+error ranks the models in the same order, but no difference is significant. This loss is dominated by a
+few days with very large $y_t^2$, so with one year of data it has little power.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.95\textwidth]{7.png}
-    \caption{Dynamic Conditional Correlation $\rho_t$ (CSPX.L vs. VUAG.L) over Time.}
-    \label{fig:dcc_plot}
+Coverage tells the same story. EWMA puts $|u_t|$ outside $2\sigma_t$ on 8.0\% of the days for both funds,
+significantly more than the nominal 4.6\% (binomial $p=0.015$): its slow reaction leaves it with too
+low a variance when a shock starts. GJR (4.4\% and 5.2\%) and GARCH (4.8\% and 6.0\%) are close to the
+nominal rate.
+
+The Student-$t$ model gives practically the same variance forecasts as the normal GJR (QLIKE and MSE do not
+differ significantly), but a much higher predictive log-likelihood ($+9$ and $+14$). Its density forecasts
+are better because they put more mass in the tails. The choice between the two thus depends on the use:
+for a volatility forecast the normal QMLE is enough, for risk measures such as value-at-risk the $t$
+distribution is preferable.
+
+\begin{table}[htbp]
+\centering
+\caption{One-day-ahead forecasts for 2025 (251 days) from models estimated on 2021--2024}\label{tab:forecast}
+\footnotesize
+\setlength{\tabcolsep}{4.5pt}
+\input{output/tab_forecast.tex}
+\par\smallskip
+\begin{minipage}{0.95\textwidth}\footnotesize
+QLIKE and MSE: mean loss with $y_t^2$ as variance proxy (lower is better). DM $p$: Diebold--Mariano test of
+equal loss with GJR(1,1,1). Pred.\ $\log L$: sum of the one-step-ahead log-densities. Last column: share of
+days with $|y_t-\hat\mu|>2\sigma_t$ (nominal 4.6\% under normality, 5.0\% under the fitted $t$).
+\end{minipage}
+\end{table}
+
+% ------------------------------------------------------------------ 5. Correlation
+\section{Extra: Correlation and DCC Analysis}\label{sec:corr}
+
+\subsection{Sub-Sample Correlations}
+Table~\ref{tab:corr_breakdown} reports the correlation between the standardised GJR(1,1,1) residuals over
+the full sample and its three thirds. The full-sample correlation is 0.81. It falls from 0.85 in the first
+third to 0.74 in the second third (September 2022 -- May 2024) and recovers to 0.84 in the last third.
+With standard errors of 0.01--0.02 these differences are large, and a Fisher-$z$ test rejects equal
+correlations ($\chi^2_2=22.7$, $p<0.001$), so the correlation is not stable.
+
+The currency explains this pattern. The second third contains the sterling crisis of autumn 2022 and the
+large dollar moves of 2023. The standard deviation of the return difference is 0.65\% there, against
+0.51\% and 0.43\% in the other thirds, and equity volatility was lower than in the first third. With
+relatively more currency noise, the two returns move less closely together.
+
+\begin{table}[htbp]
+\centering
+\caption{Standardised residual correlation breakdown}\label{tab:corr_breakdown}
+\small
+\input{output/tab_corr.tex}
+\par\smallskip
+\begin{minipage}{0.95\textwidth}\footnotesize
+s.e.: asymptotic standard error $(1-\hat\rho^2)/\sqrt{T}$. The last column gives the correlation of the raw
+returns for comparison. The test uses the Fisher transformation $\operatorname{artanh}\hat\rho$ with
+variance $1/(T-3)$.
+\end{minipage}
+\end{table}
+
+\subsection{DCC Estimates}
+The maximum likelihood DCC estimates are $\hat a=0.052$ (0.014) and $\hat b=0.920$ (0.021)
+(Table~\ref{tab:dcc}), so both parameters are precisely estimated. The standard errors are robust
+sandwich errors. They ignore the estimation error of the first-step GJR models and are therefore
+somewhat too small. The persistence $\hat a+\hat b=0.972$ implies a half-life of about 25 trading days
+for a shock to the correlation. DCC improves the log-likelihood by 42 points over a constant correlation.
+Under the null of constant correlation $b$ is not identified, so the LR statistic of 84.8 has no standard
+distribution, but it is far too large to be explained by chance.
+
+\begin{table}[htbp]
+\centering
+\caption{DCC(1,1) estimates for the standardised GJR(1,1,1) residuals}\label{tab:dcc}
+\small
+\input{output/tab_dcc.tex}
+\end{table}
+
+Figure~\ref{fig:dcc_plot} plots $\rho_t$ together with a 63-day rolling correlation as a model-free
+check. The two agree well, and DCC reacts faster. The correlation varies between 0.44 and 0.93. Its two
+deep troughs coincide with currency turmoil: the sterling swings in the months after the September 2022
+mini-budget ($\rho_t\approx0.54$ in November) and the sharp fall of the dollar after the Federal Reserve signalled
+rate cuts in December 2023 (the minimum of 0.44). At such times the two funds behave noticeably
+differently, even though they hold the same stocks.
+
+Around Liberation Day the correlation did not fall but rose, from 0.90 on 2 April to 0.93 on 4 April,
+just below the sample maximum (0.932 in January 2022), and it stayed at about 0.90 or higher for the rest
+of April. The equity shock was
+so large that it dominated the currency moves, and both standardised residuals were large and of the same
+sign on several consecutive days. Correlation thus increased exactly when diversification between the two
+currency lines would have been most valuable, as is typical in market-wide crises.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_dcc.pdf}
+\caption{Dynamic conditional correlation $\rho_t$ (CSPX.L vs.\ VUAG.L), with a 63-day rolling correlation
+and the constant full-sample correlation. Thin vertical lines separate the three thirds of the sample.}
+\label{fig:dcc_plot}
 \end{figure}
 
-The DCC path reveals significant short-term correlation fluctuations between $0.22$ and $0.96$. During severe market stress events, such as early 2022 and the 2025 tariff shock, correlation converges toward $0.90$, demonstrating that diversification benefits between US and UK broad equities decline during systemic market contractions.
-
-\newpage
-
-% ------------------------------------------------------------------ 5. Conclusion
-\section{Conclusion}
-This report evaluated univariate volatility models and dynamic correlation dynamics across LSE equity ETFs (\textbf{CSPX.L} and \textbf{VUAG.L}). The empirical results demonstrate that:
+% ------------------------------------------------------------------ 6. Conclusion
+\section{Conclusion}\label{sec:conclusion}
+Our main findings are:
 \begin{enumerate}
-    \item \textbf{GJR-GARCH(1,1)} outperforms symmetric GARCH, EWMA, and RiskMetrics models across both assets, proving the importance of asymmetric leverage modeling in equity returns.
-    \item Residual quantile transform diagnostics ($q_t$) confirm that GJR-GARCH adequately filters conditional volatility clustering.
-    \item \textbf{DCC(1,1)} modeling reveals strong, time-varying cross-asset correlation ($a + b = 0.8490$) that spikes during major tariff and geopolitical shocks, offering key insights for dynamic hedging and international equity allocation.
+    \item \textbf{GARCH(1,1)} clearly beats EWMA and RiskMetrics. The data reject $\omega=0$ and
+    $\alpha+\delta=1$, and the integrated models react too little to large shocks and stay elevated for
+    too long afterwards. RiskMetrics, despite having no estimated parameters, is almost as good as EWMA,
+    since $\hat\delta\approx0.94$.
+    \item \textbf{GJR(1,1,1)}, selected by BIC from 36 specifications, improves substantially on
+    GARCH(1,1). In this model volatility is driven by negative returns, and it followed the
+    Liberation Day shock most closely. It also gives the best out-of-sample variance forecasts for 2025,
+    significantly better than EWMA and RiskMetrics.
+    \item All models capture the volatility clustering, but the Gaussian models leave fat-tailed residuals:
+    their $q_t$ are not uniform. Student-$t$ errors ($\hat\nu\approx5$) largely fix this and give
+    better density forecasts; only the skewness of CSPX.L remains.
+    \item \textbf{DCC(1,1)} shows a high but clearly time-varying correlation ($a+b=0.97$). The
+    correlation is driven by pound/dollar volatility and rose during the tariff crash.
 \end{enumerate}
 
-% ------------------------------------------------------------------ 6. Limitations
-\section{Limitations}
-While the empirical results provide robust evidence in favor of GJR-GARCH and DCC specifications, several limitations should be noted:
+% ------------------------------------------------------------------ 7. Limitations
+\section{Limitations}\label{sec:limits}
 \begin{enumerate}
-    \item \textbf{Distributional Assumptions:} The univariate and multivariate specifications were estimated assuming conditional Gaussian innovations. Although quantile transforms ($q_t$) indicated satisfactory coverage, Student's $t$ or Generalized Error Distributions (GED) could better capture residual tail fatness.
-    \item \textbf{High-Frequency Microstructure:} The sample relies on daily log-returns. Utilizing intra-day realized volatility measures (e.g., 5-minute sampled realized variance) could further refine conditional volatility response speed around macro announcements.
-    \item \textbf{Constant Unconditional Correlation in DCC:} Standard DCC assumes that the target matrix $S$ is constant across the full sample. In long time horizons, dynamic target-dependent correlation extensions (e.g., cDCC or regime-switching GARCH) may prevent target distortion during regime shifts.
+    \item \textbf{Distributional assumptions:} Student-$t$ errors capture the fat tails, but not the
+    negative skewness of CSPX.L; a skewed-$t$ distribution would address this.
+    \item \textbf{Forecast design:} the parameters are estimated once and one year of forecasts, dominated
+    by April 2025, is a short evaluation sample. Rolling re-estimation and a longer period would give more
+    power, especially for the MSE loss.
+    \item \textbf{Two-step DCC inference:} the DCC standard errors ignore the estimation error of the GJR
+    step and are somewhat too small.
+    \item \textbf{Variance proxy:} $y_t^2$ is a noisy proxy for the daily variance. Intraday realised
+    volatility would sharpen both the forecast comparison and the analysis of announcement days.
 \end{enumerate}
-
-\newpage
 
 % ------------------------------------------------------------------ AI Disclosure & References
 \section*{AI Disclosure}
 In accordance with academic integrity guidelines of Vrije Universiteit Amsterdam, generative AI models (Gemini / ChatGPT) were utilized during the preparation of this project strictly as a coding assistant and text-formatting tool. Specifically, AI assistance was used for debugging Python parameter optimization routines, generating high-resolution Matplotlib export commands, and structuring raw empirical outputs into structured LaTeX code. All econometric models, parameter verifications, data filtering, and analytical interpretations were conducted and validated by the authors.
 
 \begin{thebibliography}{9}
-\bibitem{brooks} Brooks, C. (2019). \textit{Introductory Econometrics for Finance}. 4th ed., Cambridge University Press.
-\bibitem{engle} Engle, R. (2002). Dynamic Conditional Correlation: A Simple Class of Multivariate Generalized Autoregressive Conditional Heteroskedasticity Models. \textit{Journal of Business \& Economic Statistics}, 20(3), 339--350.
-\bibitem{gjr} Glosten, L. R., Jagannathan, R., \& Runkle, D. E. (1993). On the Relation between the Expected Value and the Volatility of the Nominal Excess Return on Stocks. \textit{Journal of Finance}, 48(5), 1779--1801.
+\bibitem[Bollerslev and Wooldridge(1992)]{bollerslev1992}
+Bollerslev, T., \& Wooldridge, J. M. (1992). Quasi-maximum likelihood estimation and inference in dynamic
+models with time-varying covariances. \textit{Econometric Reviews}, 11(2), 143--172.
+\bibitem[Brooks(2019)]{brooks2019}
+Brooks, C. (2019). \textit{Introductory Econometrics for Finance}. 4th ed., Cambridge University Press.
+\bibitem[Diebold and Mariano(1995)]{diebold1995}
+Diebold, F. X., \& Mariano, R. S. (1995). Comparing Predictive Accuracy. \textit{Journal of Business \&
+Economic Statistics}, 13(3), 253--263.
+\bibitem[Engle(2002)]{engle2002}
+Engle, R. (2002). Dynamic Conditional Correlation: A Simple Class of Multivariate Generalized
+Autoregressive Conditional Heteroskedasticity Models. \textit{Journal of Business \& Economic Statistics},
+20(3), 339--350.
+\bibitem[Glosten et al.(1993)]{glosten1993}
+Glosten, L. R., Jagannathan, R., \& Runkle, D. E. (1993). On the Relation between the Expected Value and
+the Volatility of the Nominal Excess Return on Stocks. \textit{Journal of Finance}, 48(5), 1779--1801.
+\bibitem[Patton(2011)]{patton2011}
+Patton, A. J. (2011). Volatility forecast comparison using imperfect volatility proxies. \textit{Journal of
+Econometrics}, 160(1), 246--256.
 \end{thebibliography}
+
+\appendix
+\section{All GJR Models}
+\begin{table}[htbp]
+\centering
+\caption{Fit of all 36 GJR$(p,q,o)$ models}\label{tab:grid}
+\footnotesize
+\setlength{\tabcolsep}{4.5pt}
+\input{output/tab_grid.tex}
+\par\smallskip
+\begin{minipage}{0.95\textwidth}\footnotesize
+$p$: lags of $\sigma^2_t$, $q$: lags of $u_t^2$, $o$: asymmetric lags. $k$: number of parameters
+(including $\mu$ and $\omega$). Bold: smallest AIC and BIC per series.
+\end{minipage}
+\end{table}
+
+\section{Code and Data}
+The notebook \texttt{EQF Assignment 2 (9-10 change).ipynb} reads the course price file
+\texttt{etf\_full-L.csv}, computes the returns, estimates all models and writes every table and figure of
+this report to \texttt{output/}. Running all cells reproduces all results in about fifteen seconds.
 
 \end{document}
