@@ -1,4 +1,4 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[10pt,a4paper]{article}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
@@ -191,14 +191,18 @@ The recursion starts at $\sigma_1^2=T^{-1}\sum_t u_t^2$, and pre-sample values a
 We impose $\omega>0$, $\alpha_j,\delta_i\ge0$, a non-negative response to negative shocks at each lag
 ($\alpha_k+\gamma_k\ge0$) and $\sum\alpha_j+\sum\delta_i+\tfrac12\sum\gamma_k<1$. The optimiser (SLSQP)
 starts from several values, including the optimum of every model nested one order lower. This
-guarantees that a larger model never fits worse than a model nested in it. We work with returns in percent, because with raw returns $\omega$ is of
+ensures in practice that a larger model never fits worse than a model nested in it. We work with returns in percent, because with raw returns $\omega$ is of
 order $10^{-5}$, which makes the numerical optimisation badly scaled.
 
 Standard errors come from a numerical Hessian. Normality is clearly rejected (Section~\ref{sec:diag}), so
 we treat the estimates as quasi-maximum likelihood and report the robust sandwich standard errors of
 \citet{bollerslev1992}. When a parameter lies on the boundary of the parameter space (such as
 $\hat\alpha_1=0$ below), its standard error and the usual $\chi^2$ distribution of likelihood ratio (LR)
-tests are not valid, and we interpret them with care.
+tests are not valid, and we interpret them with care. Moreover, because the Gaussian likelihood is
+misspecified, LR statistics and information criteria are only approximately valid under QML. We therefore
+check the main LR conclusions with robust Wald $t$-statistics, which lead to the same conclusions: the
+asymmetry $\gamma_1$ in GJR(1,1,1) has robust $t=4.7$ (CSPX.L) and $4.2$ (VUAG.L), while
+$(\hat\delta_1-0.94)/\text{s.e.}$ in EWMA is only $0.33$ and $0.58$.
 
 To compare models we use LR tests for nested models (EWMA within GARCH, RiskMetrics within EWMA, GARCH
 within GJR) and the information criteria AIC $=-2\log L+2k$ and BIC $=-2\log L+k\ln T$ (lower is better; BIC is the SBIC of
@@ -227,7 +231,8 @@ $S = \operatorname{var}(v)$, we estimate the correlation part of the DCC(1,1) mo
     Q_{t+1} &= S\,(1 - a - b) + a\, v_t v_t' + b\, Q_t , \qquad Q_1 = S,\\
     R_{t+1} &= (\operatorname{diag} Q_{t+1})^{-1/2}\, Q_{t+1}\, (\operatorname{diag} Q_{t+1})^{-1/2},
 \end{align}
-and maximise $\sum_t \log\phi_2(v_t; 0, R_t)$ over $(a,b)$. Here $a$ measures the reaction of the
+and maximise $\sum_t \log\phi_2(v_t; 0, R_t)$ over $(a,b)$. The assignment writes $Q_t$ in the middle of
+the expression for $R_{t+1}$; we use $Q_{t+1}$, so that $R_{t+1}$ is a proper correlation matrix. Here $a$ measures the reaction of the
 correlation to new shocks and $b$ its persistence. The correlation $R_t$ used to evaluate $v_t$ depends
 only on $v_1,\dots,v_{t-1}$ (given $S$ and the first-step GJR estimates, which use the full sample).
 
@@ -279,8 +284,8 @@ Gaussian models. Its
 $\hat\alpha_1$ is zero in both series, while $\hat\gamma_1=0.217$ and $0.195$ with robust standard errors
 of 0.05. The volatility response is thus dominated by falling prices, a strong form of the leverage
 effect. Because $\hat\alpha_1$ lies on the boundary its standard
-error is not reliable, and a small positive $\alpha_1$ cannot be ruled out. Still, the asymmetry is convincing: GJR improves on GARCH(1,1) by about 34 log-likelihood
-points for one extra parameter.
+error is not reliable, and a small positive $\alpha_1$ cannot be ruled out. Still, the asymmetry is convincing: GJR improves on GARCH(1,1) by about 34 (CSPX.L) and 32 (VUAG.L)
+log-likelihood points for one extra parameter.
 
 Most parameters are precisely estimated. The standard errors of the GJR columns (marked $\dagger$ in
 Table~\ref{tab:params}) are affected by the boundary estimate of $\alpha_1$, which matters mainly for
@@ -332,7 +337,9 @@ absolute returns $|y_t|$. All models trace the main regimes: the 2022 bear marke
 amplitude. GJR has the sharpest peaks after market falls, and in rising markets it often gives the lowest
 volatility. EWMA and RiskMetrics are the smoothest. They react weakly to a single large return
 ($\alpha\approx0.05$), but stay elevated for a long time because they lack mean reversion. GARCH lies in
-between.
+between. The share of days with $|u_t|>2\sigma_t$ (nominal 4.6\% under normality) confirms this ranking:
+5.3\% and 5.5\% for GJR, 5.8\% and 6.0\% for GARCH, 6.0--6.4\% for EWMA and 6.2--6.7\% for RiskMetrics
+(CSPX.L and VUAG.L). All models exceed the nominal rate somewhat, as expected with fat tails, but GJR the least.
 
 \begin{figure}[htbp]
 \centering
@@ -353,8 +360,7 @@ and 3.0\%. GJR peaked at 6.7\% and 5.8\% within a week, close to the realised ab
 EWMA and RiskMetrics peaked at only 4.2--5.1\%, and only on 11 April. The rebound of up to 5\% after the
 tariff pause (9 April) barely moves GJR, whose volatility falls from 11 April while GARCH still rises. By
 early May GJR is back near its pre-shock level, whereas EWMA and RiskMetrics still give
-$2\sigma_t\approx3.6\%$. GJR thus followed both the build-up and the decay of the shock most closely,
-although at its peak it somewhat overshot (6.7\% against a largest absolute return of 5.1\%).
+$2\sigma_t\approx3.6\%$. GJR thus followed both the build-up and the decay of the shock most closely.
 
 \begin{figure}[htbp]
 \centering
@@ -416,7 +422,7 @@ $\hat\gamma_1\approx0.2$), so the model choice is stable over time. Table~\ref{t
 in-sample ranking holds out of sample: GJR has the lowest QLIKE, followed by GARCH, RiskMetrics and EWMA.
 GJR is significantly better than EWMA and RiskMetrics for both funds ($p\le0.02$) and than GARCH for CSPX.L
 ($p=0.02$), but not for VUAG.L ($p=0.40$). April 2025 contributes much of the gain; without it EWMA and
-RiskMetrics are still worse, with $p=0.01$ (CSPX.L) and $p=0.05$--$0.06$ (VUAG.L). The MSE ranks the models
+RiskMetrics are still worse, with $p\approx0.01$--$0.02$ (CSPX.L) and $p=0.05$--$0.06$ (VUAG.L). The MSE ranks the models
 in the same order, but is dominated by a few very large $y_t^2$ and separates none of them.
 
 EWMA puts $|u_t|$ outside $2\sigma_t$ on 8.0\% of the days for both funds, significantly more than the
@@ -489,10 +495,14 @@ distribution, but it is far too large to be explained by chance.
 \end{table}
 
 Figure~\ref{fig:dcc_plot} plots $\rho_t$ together with a 63-day rolling correlation as a model-free
-check. The two agree well, and DCC reacts faster. The correlation varies between 0.44 and 0.93. Its two
-deep troughs coincide with currency turmoil: the sterling swings in the months after the September 2022
-mini-budget ($\rho_t\approx0.54$ in November) and the sharp fall of the dollar after the Federal Reserve signalled
-rate cuts in December 2023 (the minimum of 0.44). At such times the two funds behave noticeably
+check. The two agree well, and DCC reacts faster. The correlation varies between 0.44 and 0.93. As a
+proxy for currency noise, the lower panel shows the rolling standard deviation of the return difference
+VUAG.L $-$ CSPX.L, which is driven by the GBP/USD rate. Over the full sample it is negatively related to
+$\rho_t$ (correlation $-0.41$). The first deep trough ($\rho_t\approx0.54$ in November 2022) coincides with
+the sterling swings after the September 2022 mini-budget, when this proxy reached 1.4\%, three times its
+median of 0.45\%. The minimum of 0.44 in December 2023 coincides with the large dollar moves after the
+Federal Reserve signalled rate cuts; the proxy rose only moderately then (0.60\%), but equity volatility was
+very low, so the currency part weighed relatively heavily. At such times the two funds behave noticeably
 differently, even though they hold the same stocks.
 
 Around Liberation Day the correlation did not fall but rose, from 0.90 on 2 April to 0.93 on 4 April,
@@ -507,7 +517,9 @@ currency lines did not increase when it would have been most useful.
 \centering
 \includegraphics[width=\textwidth]{fig_dcc.pdf}
 \caption{Dynamic conditional correlation $\rho_t$ (CSPX.L vs.\ VUAG.L), with a 63-day rolling correlation
-and the constant full-sample correlation. Thin vertical lines separate the three thirds of the sample.}
+and the constant full-sample correlation (top), and the 21-day standard deviation of the return difference
+VUAG.L $-$ CSPX.L as a currency proxy (bottom). Shading marks the three thirds of the sample; the dashed red
+line is Liberation Day.}
 \label{fig:dcc_plot}
 \end{figure}
 
