@@ -70,7 +70,7 @@ on the S\&P~500: \textbf{CSPX.L} (iShares, quoted in US dollars) and \textbf{VUA
 pounds), using $T=1{,}258$ daily returns from 2021 to 2025. GARCH(1,1) clearly beats EWMA and RiskMetrics,
 and BIC selects GJR(1,1,1) from 36 GJR specifications for both funds. In this model $\hat\alpha_1$ is estimated at zero, so the volatility
 response is dominated by negative shocks. GJR reacted fastest to the Liberation Day tariff shock (2 April 2025) and, estimated
-on 2021--2024, gives the best one-day-ahead variance forecasts for 2025. All Gaussian models leave
+on 2021--2024, gives the best one-day-ahead variance forecasts for 2025 by QLIKE. All Gaussian models leave
 fat-tailed residuals; Student-$t$ errors ($\nu\approx5$) remove most of this misfit. A DCC model shows a
 correlation between 0.44 and 0.93 that falls when the pound/dollar rate is volatile and rose to near its
 sample maximum just after Liberation Day.
@@ -281,7 +281,7 @@ strongly rejected (LR of 47 and 46 with two degrees of freedom). The data prefer
 to a long-run level and reacts more strongly to new shocks.
 
 For both assets \textbf{GJR(1,1,1)} gives the highest log-likelihood and the lowest AIC and BIC of the
-Gaussian models. Its
+Gaussian models in Table~\ref{tab:params}. Its
 $\hat\alpha_1$ is zero in both series, while $\hat\gamma_1=0.217$ and $0.195$ with robust standard errors
 of 0.05. The volatility response is thus dominated by falling prices, a strong form of the leverage
 effect. Because $\hat\alpha_1$ lies on the boundary its standard
@@ -338,11 +338,12 @@ absolute returns $|y_t|$. All models trace the main regimes: the 2022 bear marke
 amplitude. GJR has the sharpest peaks after market falls, and in rising markets it often gives the lowest
 volatility. EWMA and RiskMetrics are the smoothest. They react weakly to a single large return
 ($\alpha\approx0.05$), but stay elevated for a long time because they lack mean reversion. Their peaks
-therefore lag behind those of GJR: a single shock adds only about 5--6\% of $u_{t-1}^2$ to the variance, so
-EWMA and RiskMetrics only rise strongly after several large returns in a row, whereas GJR adds about 20\%
+are generally lower than those of GJR, and around Liberation Day they also came later (11 April, against
+8--10 April for GJR): a single shock adds only about 5--6\% of $u_{t-1}^2$ to the variance, so EWMA and
+RiskMetrics only rise strongly after several large returns in a row, whereas GJR adds about 20\%
 of $u_{t-1}^2$ after a negative return ($\hat\gamma_1\approx0.2$). GARCH lies in
 between. The share of days with $|u_t|>2\sigma_t$ (nominal 4.6\% under normality) broadly supports this ranking:
-5.3\% and 5.5\% for GJR, 5.8\% and 6.0\% for GARCH, 6.0--6.4\% for EWMA and 6.2--6.7\% for RiskMetrics
+5.3\% and 5.5\% for GJR, 5.8\% and 6.0\% for GARCH, 6.4\% and 6.0\% for EWMA, and 6.7\% and 6.2\% for RiskMetrics
 (CSPX.L and VUAG.L). All models exceed the nominal rate somewhat, as expected with fat tails, but GJR the least.
 
 \begin{figure}[htbp]
@@ -385,8 +386,8 @@ tests.
 The volatility dynamics are captured well. No model leaves significant autocorrelation in $v_t^2$, and
 GARCH and GJR give $v_t$ a standard deviation of 1.00. EWMA and RiskMetrics give 1.04--1.05, because
 their variance is not tied to the level of the data. The shape of the distribution, however, is not
-normal. The histograms have too many observations in the middle and in the outermost
-bins and too few at moderate quantiles. This is the signature of fatter tails than the normal. The excess
+normal. The histograms have too many observations in the middle and in the lowest
+bin, and too few at moderate quantiles and in the upper tail. This is the signature of fatter tails than the normal. The excess
 kurtosis of $v_t$ is 1.3--2.6, and both the Kolmogorov--Smirnov and the $\chi^2$ test reject uniformity
 for every Gaussian model. The lowest bin is higher than the highest one, reflecting the remaining
 negative skewness. GJR reduces the kurtosis most (1.34 and 1.77) but does not remove it.
@@ -559,7 +560,7 @@ Our main findings are:
     \item \textbf{Boundary estimate of $\alpha_1$:} because $\hat\alpha_1=0$, the standard errors of the
     other GJR parameters can be distorted. We looked into fixing $\alpha_1=0$, i.e.\ GJR(1,0,1): the estimates
     and the likelihood are unchanged; for VUAG.L the standard errors hardly change, but for CSPX.L they become much smaller (for the CSPX.L $t$ model
-    0.04 instead of 0.29 for $\hat\delta_1$; $\omega$ for CSPX.L then has $t\approx3$). As $q=0$ lies
+    0.04 instead of 0.29 for $\hat\delta_1$; $\omega$ for CSPX.L then has $t\approx3.2$ in the normal model and 2.5 in the $t$ model). As $q=0$ lies
     outside the grid of the assignment, we keep GJR(1,1,1) and leave proper boundary inference outside the
     scope of this report.
     \item \textbf{Two-step DCC inference:} the DCC standard errors ignore the estimation error of the GJR
@@ -578,7 +579,7 @@ This disclosure is written in accordance with the academic integrity guidelines 
   \item \textbf{Coding assistance and formatting (Gemini, ChatGPT).} These tools helped to debug the Python parameter-optimisation routines in Arnav's first implementation, to generate Matplotlib commands for exporting high-resolution figures, and to turn raw empirical output into LaTeX code.
   \item \textbf{Python code (Claude).} Claude did most of the coding of the notebook, under extensive monitoring by us. Approximate prompt: ``Student-t errors for GJR(1,1,1) and redo the q\_t histogram''. We did not take the code for granted and checked that the results were sensible and consistent, for example that larger nested models never fit worse, that the estimates satisfy the parameter constraints, and that rerunning the notebook from \texttt{returns.csv} alone gives identical tables.
   \item \textbf{LaTeX layout and language (Claude).} Claude set up the LaTeX layout and edited our text where needed or where it was not academic enough, while keeping our tone and message the same. The substantive choices were ours, for example which ETFs to use, selecting the model by BIC, keeping $\alpha_1$ free and discussing the boundary estimate instead of re-estimating, and using one degree of freedom in the LR test of RiskMetrics against EWMA.
-  \item \textbf{Review and references (Claude).} We asked Claude to act as an independent grader and check the report against the assignment brief (``Make a sub-agent check and grade the PDF against the assignment''), and to look up and verify the references and their DOIs via Crossref. We also asked it to check whether our statistical tests were set up appropriately, for example the degrees of freedom of the LR tests; it confirmed that they were. The last such check graded the report 9.3/10. We decided ourselves which suggested changes to adopt.
+  \item \textbf{Review and references (Claude).} We asked Claude to act as an independent grader and check the report against the assignment brief (``Make a sub-agent check and grade the PDF against the assignment''), and to look up and verify the references and their DOIs via Crossref. We also asked it to check whether our statistical tests were set up appropriately, for example the degrees of freedom of the LR tests; it confirmed that they were. The last checks graded the report 9.2--9.3/10. We decided ourselves which suggested changes to adopt.
   \item \textbf{This disclosure (Claude).} The same model drafted this section from our notes on how we used AI. We reviewed and corrected it.
 \end{itemize}
 
