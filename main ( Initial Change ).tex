@@ -33,7 +33,7 @@
 \begin{titlepage}
 \centering
 \vspace*{3cm}
-{\LARGE\bfseries Applied Volatility Modeling and Dynamic Conditional Correlation\par}
+{\LARGE\bfseries Applied Volatility Modelling and Dynamic Conditional Correlation\par}
 \vspace{0.8cm}
 {\large An Empirical Evaluation of GARCH, Asymmetric, and DCC Specifications for Two S\&P~500 ETFs on the LSE\par}
 \vspace{2.5cm}
@@ -101,7 +101,8 @@ From the LSE ETF universe of the first assignment we selected \textbf{CSPX.L} (i
 \textbf{VUAG.L} (Vanguard, sterling line): two large, liquid, physically replicating and accumulating
 S\&P~500 funds, so the yearly dividend adjustment of this data set causes no jumps. VUAG.L returns have a
 correlation of 0.993 with VUSA.L (Vanguard's distributing S\&P~500 line) but only 0.57--0.58 with FTSE~100
-ETFs. Both have prices on all 1,259 trading days of 2021--2025; the 31 dates without prices are dropped.
+ETFs. The price file has 1,290 dates in 2021--2025; we drop the 31 dates without prices, which leaves
+1,259 trading days.
 
 \subsection{Returns and Descriptive Statistics}
 We compute daily log-returns in percent, $y_t = 100\,(\ln P_t - \ln P_{t-1})$, which gives $T=1{,}258$
@@ -117,7 +118,7 @@ sample.
 
 Table~\ref{tab:summary_stats} shows a small positive mean, negative skewness and excess kurtosis of about
 3 for both funds. Normality is rejected, and the Ljung--Box test on squared returns shows strong
-volatility clustering. VUAG.L is less volatile than CSPX.L (14.6\% against 16.1\% per year). The dollar
+volatility clustering, which is also visible in Figure~\ref{fig:returns}. VUAG.L is less volatile than CSPX.L (14.6\% against 16.1\% per year). The dollar
 tends to strengthen when US equities fall: the correlation between the CSPX.L return and the currency
 difference above is 0.44. For a sterling investor, the currency therefore softens equity losses.
 
@@ -336,8 +337,11 @@ absolute returns $|y_t|$. All models trace the main regimes: the 2022 bear marke
 2023--2024, the short spike of August 2024 and the tariff shock of 2025. They differ in timing and
 amplitude. GJR has the sharpest peaks after market falls, and in rising markets it often gives the lowest
 volatility. EWMA and RiskMetrics are the smoothest. They react weakly to a single large return
-($\alpha\approx0.05$), but stay elevated for a long time because they lack mean reversion. GARCH lies in
-between. The share of days with $|u_t|>2\sigma_t$ (nominal 4.6\% under normality) confirms this ranking:
+($\alpha\approx0.05$), but stay elevated for a long time because they lack mean reversion. Their peaks
+therefore lag behind those of GJR: a single shock adds only about 5--6\% of $u_{t-1}^2$ to the variance, so
+EWMA and RiskMetrics only rise strongly after several large returns in a row, whereas GJR adds about 20\%
+of $u_{t-1}^2$ after a negative return ($\hat\gamma_1\approx0.2$). GARCH lies in
+between. The share of days with $|u_t|>2\sigma_t$ (nominal 4.6\% under normality) broadly supports this ranking:
 5.3\% and 5.5\% for GJR, 5.8\% and 6.0\% for GARCH, 6.0--6.4\% for EWMA and 6.2--6.7\% for RiskMetrics
 (CSPX.L and VUAG.L). All models exceed the nominal rate somewhat, as expected with fat tails, but GJR the least.
 
@@ -411,7 +415,7 @@ errors, against the uniform $U(0,1)$ density (dashed).}
 \begin{minipage}{0.95\textwidth}\footnotesize
 JB: Jarque--Bera test of normality of $v_t$. LB$_{10}(v^2)$: Ljung--Box test (10 lags) on $v_t^2$.
 KS: Kolmogorov--Smirnov test of $q_t\sim U(0,1)$. $\chi^2_9$: Pearson test of equal counts in 10 bins of
-$q_t$. For GJR(1,1,1)-$t$, $q_t$ uses the Student-$t$ cdf; JB still tests normality of $v_t$.
+$q_t$. Both tests ignore that the parameters are estimated, so their $p$-values are only approximate. For GJR(1,1,1)-$t$, $q_t$ uses the Student-$t$ cdf; JB still tests normality of $v_t$.
 \end{minipage}
 \end{table}
 
@@ -419,11 +423,12 @@ $q_t$. For GJR(1,1,1)-$t$, $q_t$ uses the Student-$t$ cdf; JB still tests normal
 \section{Out-of-Sample Forecasts for 2025}\label{sec:forecast}
 Estimated on 2021--2024 alone, BIC again selects GJR(1,1,1) for both series ($\hat\alpha_1=0$,
 $\hat\gamma_1\approx0.2$), so the model choice is stable over time. Table~\ref{tab:forecast} shows that the
-in-sample ranking holds out of sample: GJR has the lowest QLIKE, followed by GARCH, RiskMetrics and EWMA.
+in-sample ranking largely holds out of sample: the two GJR models have the lowest QLIKE, followed by GARCH,
+RiskMetrics and EWMA.
 GJR is significantly better than EWMA and RiskMetrics for both funds ($p\le0.02$) and than GARCH for CSPX.L
 ($p=0.02$), but not for VUAG.L ($p=0.40$). April 2025 contributes much of the gain; without it EWMA and
-RiskMetrics are still worse, with $p\approx0.01$--$0.02$ (CSPX.L) and $p=0.05$--$0.06$ (VUAG.L). The MSE ranks the models
-in the same order, but is dominated by a few very large $y_t^2$ and separates none of them.
+RiskMetrics are still worse, with $p\approx0.01$--$0.02$ (CSPX.L) and $p=0.05$--$0.06$ (VUAG.L). The MSE gives a broadly
+similar ranking, but is dominated by a few very large $y_t^2$ and separates none of them.
 
 EWMA puts $|u_t|$ outside $2\sigma_t$ on 8.0\% of the days for both funds, significantly more than the
 nominal 4.6\% (binomial $p=0.015$), because it reacts too slowly when a shock starts; GJR and GARCH stay
@@ -499,7 +504,8 @@ check. The two agree well, and DCC reacts faster. The correlation varies between
 proxy for currency noise, the lower panel shows the rolling standard deviation of the return difference
 VUAG.L $-$ CSPX.L, which is driven by the GBP/USD rate. Over the full sample it is negatively related to
 $\rho_t$ (correlation $-0.41$). The first deep trough ($\rho_t\approx0.54$ in November 2022) coincides with
-the sterling swings after the September 2022 mini-budget, when this proxy reached 1.4\%, three times its
+the sterling swings after the September 2022 mini-budget, about a month after this proxy peaked at 1.4\%
+(still 1.2\% at the trough), against a
 median of 0.45\%. The minimum of 0.44 in December 2023 coincides with the large dollar moves after the
 Federal Reserve signalled rate cuts; the proxy rose only moderately then (0.60\%), but equity volatility was
 very low, so the currency part weighed relatively heavily. At such times the two funds behave noticeably
@@ -551,8 +557,8 @@ Our main findings are:
     by April 2025, is a short evaluation sample. Rolling re-estimation and a longer period would give more
     power, especially for the MSE loss.
     \item \textbf{Boundary estimate of $\alpha_1$:} because $\hat\alpha_1=0$, the standard errors of the
-    other GJR parameters are distorted. We looked into fixing $\alpha_1=0$, i.e.\ GJR(1,0,1): the estimates
-    and the likelihood are unchanged and the standard errors become much smaller (for the CSPX.L $t$ model
+    other GJR parameters can be distorted. We looked into fixing $\alpha_1=0$, i.e.\ GJR(1,0,1): the estimates
+    and the likelihood are unchanged; for VUAG.L the standard errors hardly change, but for CSPX.L they become much smaller (for the CSPX.L $t$ model
     0.04 instead of 0.29 for $\hat\delta_1$; $\omega$ for CSPX.L then has $t\approx3$). As $q=0$ lies
     outside the grid of the assignment, we keep GJR(1,1,1) and leave proper boundary inference outside the
     scope of this report.
@@ -563,8 +569,20 @@ Our main findings are:
 \end{enumerate}
 
 % ------------------------------------------------------------------ AI Disclosure & References
+\clearpage
 \section*{AI Disclosure}
-In accordance with academic integrity guidelines of Vrije Universiteit Amsterdam, generative AI models (Gemini / ChatGPT) were utilized during the preparation of this project strictly as a coding assistant and text-formatting tool. Specifically, AI assistance was used for debugging Python parameter optimization routines, generating high-resolution Matplotlib export commands, and structuring raw empirical outputs into structured LaTeX code. All econometric models, parameter verifications, data filtering, and analytical interpretations were conducted and validated by the authors.
+This disclosure is written in accordance with the academic integrity guidelines of Vrije Universiteit Amsterdam.
+
+\paragraph{Use of AI.} For this assignment we used three generative AI tools: Gemini (Google), ChatGPT (OpenAI) and Claude (Anthropic, model Opus 5.5, used through the Claude Code tool). Gemini and ChatGPT were used early in the project as a coding assistant and text-formatting tool. We list the purposes below, with approximate prompts and how we checked the output.
+\begin{itemize}
+  \item \textbf{Coding assistance and formatting (Gemini, ChatGPT).} These tools helped to debug the Python parameter-optimisation routines in Arnav's first implementation, to generate Matplotlib commands for exporting high-resolution figures, and to turn raw empirical output into LaTeX code.
+  \item \textbf{Python code (Claude).} Claude did most of the coding of the notebook, under extensive monitoring by us. Approximate prompt: ``Student-t errors for GJR(1,1,1) and redo the q\_t histogram''. We did not take the code for granted and checked that the results were sensible and consistent, for example that larger nested models never fit worse, that the estimates satisfy the parameter constraints, and that rerunning the notebook from \texttt{returns.csv} alone gives identical tables.
+  \item \textbf{LaTeX layout and language (Claude).} Claude set up the LaTeX layout and edited our text where needed or where it was not academic enough, while keeping our tone and message the same. The substantive choices were ours, for example which ETFs to use, selecting the model by BIC, keeping $\alpha_1$ free and discussing the boundary estimate instead of re-estimating, and using one degree of freedom in the LR test of RiskMetrics against EWMA.
+  \item \textbf{Review and references (Claude).} We asked Claude to act as an independent grader and check the report against the assignment brief (``Make a sub-agent check and grade the PDF against the assignment''), and to look up and verify the references and their DOIs via Crossref. We also asked it to check whether our statistical tests were set up appropriately, for example the degrees of freedom of the LR tests; it confirmed that they were. The last such check graded the report 9.3/10. We decided ourselves which suggested changes to adopt.
+  \item \textbf{This disclosure (Claude).} The same model drafted this section from our notes on how we used AI. We reviewed and corrected it.
+\end{itemize}
+
+\paragraph{Reflection.} Generative AI saved us time on implementation and layout, which allowed us to spend more time on the econometric choices and their interpretation. However, code generated by AI can run without errors and still be wrong, so checking every step against the data, the assignment brief and our own understanding was essential. We remain responsible for all content of this report and can explain every result in it.
 
 \begin{thebibliography}{9}
 \bibitem[Bollerslev and Wooldridge(1992)]{bollerslev1992}
