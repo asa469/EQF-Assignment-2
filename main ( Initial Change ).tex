@@ -208,7 +208,10 @@ $\hat\alpha_1=0$ below), its standard error and the usual $\chi^2$ distribution 
 tests are not valid, and we interpret them with care.
 
 To compare models we use LR tests for nested models (EWMA within GARCH, RiskMetrics within EWMA, GARCH
-within GJR) and AIC and BIC for non-nested models. We also check whether the standardised residuals
+within GJR) and the information criteria AIC $=-2\log L+2k$ and BIC $=-2\log L+k\ln T$ (lower is better),
+which penalise extra parameters. With $T=1{,}258$, BIC charges about 7 points per parameter against 2 for
+AIC, so it favours smaller models; we use BIC for the final choice and AIC as a check. We also check
+whether the standardised residuals
 $v_t = u_t/\sigma_t$ behave as the model implies.
 
 \subsection{Out-of-Sample Forecast Evaluation}
@@ -277,22 +280,25 @@ does not reject RiskMetrics against EWMA. The restriction that turns GARCH into 
 strongly rejected (LR of 47 and 46 with two degrees of freedom). The data prefer a variance that reverts
 to a long-run level and reacts more strongly to new shocks.
 
-For both assets \textbf{GJR(1,1,1)} gives the highest log-likelihood and the lowest AIC and BIC. Its
+For both assets \textbf{GJR(1,1,1)} gives the highest log-likelihood and the lowest AIC and BIC of the
+Gaussian models. Its
 $\hat\alpha_1$ is zero in both series, while $\hat\gamma_1=0.22$ and $0.19$ with robust standard errors of
 0.05. Volatility is thus driven by falling prices, and the data show no measurable effect of positive
 returns, a strong form of the leverage effect. Because $\hat\alpha_1$ lies on the boundary its standard
 error is not reliable, and a small positive $\alpha_1$ cannot be ruled out. Still, the asymmetry is convincing: GJR improves on GARCH(1,1) by about 34 log-likelihood
 points for one extra parameter.
 
-Most parameters are precisely estimated. The exception is $\omega$ for CSPX.L (robust $t\approx1.6$).
+Most parameters are precisely estimated. The exception is $\omega$ for CSPX.L (robust $t\approx1.6$),
+although this standard error is also affected by the boundary estimate of $\alpha_1$
+(Section~\ref{sec:limits}).
 
 The last column re-estimates GJR(1,1,1) with Student-$t$ errors. The estimated degrees of freedom are
 $\hat\nu=5.3$ and $5.2$, far from the normal limit, and the log-likelihood rises by 31 and 38 points for
 one extra parameter. The variance dynamics hardly change ($\hat\alpha_1=0$, $\hat\delta_1=0.84$,
 $\hat\gamma_1=0.27$ and $0.21$), so the asymmetry is not an artefact of the normal assumption. For CSPX.L
 the robust standard errors of the $t$ model are large (for example 0.29 for $\hat\delta_1$, against 0.09
-non-robust). The large gap between the two suggests that the $t$ model is still misspecified, plausibly
-because of the negative skewness discussed in Section~\ref{sec:diag}.
+non-robust). This is a consequence of $\hat\alpha_1=0$ lying on the boundary of the parameter space, which
+makes the numerical standard errors unreliable (Section~\ref{sec:limits}).
 
 \begin{table}[htbp]
 \centering
@@ -537,6 +543,12 @@ Our main findings are:
     \item \textbf{Forecast design:} the parameters are estimated once and one year of forecasts, dominated
     by April 2025, is a short evaluation sample. Rolling re-estimation and a longer period would give more
     power, especially for the MSE loss.
+    \item \textbf{Boundary estimate of $\alpha_1$:} because $\hat\alpha_1=0$, the standard errors of the
+    other GJR parameters are distorted. We looked into fixing $\alpha_1=0$, i.e.\ GJR(1,0,1): the estimates
+    and the likelihood are unchanged and the standard errors become much smaller (for the CSPX.L $t$ model
+    0.04 instead of 0.29 for $\hat\delta_1$; $\omega$ for CSPX.L then has $t\approx3$). As $q=0$ lies
+    outside the grid of the assignment, we keep GJR(1,1,1) and leave proper boundary inference outside the
+    scope of this report.
     \item \textbf{Two-step DCC inference:} the DCC standard errors ignore the estimation error of the GJR
     step and are somewhat too small.
     \item \textbf{Variance proxy:} $y_t^2$ is a noisy proxy for the daily variance. Intraday realised
